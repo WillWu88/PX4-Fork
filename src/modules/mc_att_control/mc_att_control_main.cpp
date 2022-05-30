@@ -67,8 +67,7 @@ MulticopterAttitudeControl::~MulticopterAttitudeControl()
 	perf_free(_loop_perf);
 }
 
-bool
-MulticopterAttitudeControl::init()
+bool MulticopterAttitudeControl::init()
 {
 	if (!_vehicle_attitude_sub.registerCallback()) {
 		PX4_ERR("callback registration failed");
@@ -78,8 +77,7 @@ MulticopterAttitudeControl::init()
 	return true;
 }
 
-void
-MulticopterAttitudeControl::parameters_updated()
+void MulticopterAttitudeControl::parameters_updated()
 {
 	// Store some of the parameters in a more convenient way & precompute often-used values
 	_attitude_control.setProportionalGain(Vector3f(_param_mc_roll_p.get(), _param_mc_pitch_p.get(), _param_mc_yaw_p.get()),
@@ -93,8 +91,7 @@ MulticopterAttitudeControl::parameters_updated()
 	_man_tilt_max = math::radians(_param_mpc_man_tilt_max.get());
 }
 
-float
-MulticopterAttitudeControl::throttle_curve(float throttle_stick_input)
+float MulticopterAttitudeControl::throttle_curve(float throttle_stick_input)
 {
 	const float throttle_min = _landed ? 0.0f : _param_mpc_manthr_min.get();
 
@@ -110,8 +107,7 @@ MulticopterAttitudeControl::throttle_curve(float throttle_stick_input)
 	}
 }
 
-void
-MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp)
+void MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp)
 {
 	vehicle_attitude_setpoint_s attitude_setpoint{};
 	const float yaw = Eulerf(q).psi();
@@ -215,8 +211,7 @@ MulticopterAttitudeControl::generate_attitude_setpoint(const Quatf &q, float dt,
 	_last_attitude_setpoint = attitude_setpoint.timestamp;
 }
 
-void
-MulticopterAttitudeControl::Run()
+void MulticopterAttitudeControl::Run()
 {
 	if (should_exit()) {
 		_vehicle_attitude_sub.unregisterCallback();
