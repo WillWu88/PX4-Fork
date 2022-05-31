@@ -135,5 +135,5 @@
                 "${workspaceFolder}/validation/module_schema.yaml": "${workspaceFolder}/src/modules/*/module.yaml"
         },
         "cortex-debug.openocdPath": "${env:PICO_SDK_PATH}/../openocd/src/openocd",
-        "C_Cpp.errorSquiggles": "Enabled" // Added for rp2040
+        "C_Cpp.errorSquiggles": "Disabled" // Added for rp2040
 }
