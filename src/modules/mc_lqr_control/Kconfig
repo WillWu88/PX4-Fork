@@ -1,5 +1,5 @@
 menuconfig MODULES_LQR_CONTROL
-	bool "lqr_control"
+	bool "mc_lqr_control"
 	default n
 	---help---
 		System Theory Lab LQR Controller; replaces default attitude and rate controller

@@ -32,12 +32,16 @@
 ############################################################################
 
 px4_add_module(
-	MODULE modules__lqr_control
+	MODULE modules__mc_lqr_control
 	MAIN lqr_control
 	COMPILE_FLAGS
 		${MAX_CUSTOM_OPT_LEVEL}
 	SRCS
-		lqr_control.cpp
-		lqr_control.hpp
+		mc_lqr_control.cpp
+		mc_lqr_control.hpp
 	DEPENDS
+		circuit_breaker
+		mathlib
+		LQRControl
+		px4_work_queue
 	)
