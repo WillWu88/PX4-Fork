@@ -50,6 +50,7 @@
 
 #include <matrix/matrix/math.hpp>
 #include <mathlib/math/Limits.hpp>
+#include <eigen/Dense>
 
 class AttitudeControl
 {
@@ -107,4 +108,5 @@ private:
 
 	matrix::Quatf _attitude_setpoint_q; ///< latest known attitude setpoint e.g. from position control
 	float _yawspeed_setpoint{0.f}; ///< latest known yawspeed feed-forward setpoint
+	Eigen::Matrix<float, 2 , 2> _test;
 };

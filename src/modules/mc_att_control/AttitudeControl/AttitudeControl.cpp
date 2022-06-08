@@ -50,6 +50,8 @@ void AttitudeControl::setProportionalGain(const matrix::Vector3f &proportional_g
 	if (_yaw_w > 1e-4f) {
 		_proportional_gain(2) /= _yaw_w;
 	}
+	_test << 1.0f, 1.0f,
+		1.0f, 1.0f;
 }
 
 matrix::Vector3f AttitudeControl::update(const Quatf &q) const
