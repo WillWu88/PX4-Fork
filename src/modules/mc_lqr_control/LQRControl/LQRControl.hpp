@@ -13,6 +13,7 @@
 
 #include <matrix/matrix/math.hpp>
 #include <mathlib/math/Limits.hpp>
+#include <eigen/Dense>
 
 
 #include <lib/mixer/MultirotorMixer/MultirotorMixer.hpp>
@@ -28,7 +29,7 @@ public:
 	 * Set new lqr gain matrix (6x3)
 	 * @param new_k new gain matrix
 	 */
-	void setLQRGain(const matrix::Matrix &new_k) {_lqr_gain_matrix = new_k;}
+	void setLQRGain(const Eigen::Matrix<float, 3 , 6> &new_k) {_lqr_gain_matrix = new_k;}
 
 	/**
 	 * Set a new attitude setpoint replacing the one tracked before
@@ -60,6 +61,15 @@ public:
 	void setRateSetpoint(const matrix::Vector3f &new_rate_setpoint) {_rate_setpoint = new_rate_setpoint};
 
 	/**
+	 * Construct error state for gain multiplication
+	 *
+	 * @param rate_state current angular rate from estimator
+	 * @param q_state current rotation from estimator
+	 * @return error vector for gain multiplication
+	 */
+	Eigen::Matrix<float, 6, 1> construct_state(const matrix::Vector3f &rate_state, const matrix::Quatf &q_state);
+
+	/**
 	 * Set saturation status
 	 * @param control saturation vector from control allocator
 	 */
@@ -79,8 +89,10 @@ public:
 				const bool landed)
 
 private:
-	matrix::Quatf _attitude_setpoint;
-	matrix::Matrix _lqr_gain_matrix;
+	const int _num_of_output = 3;
+	const int _num_of_states = 6;
+	Eigen::Vector4d _attitude_setpoint;
+	Eigen::MatrixXf _lqr_gain_matrix(_num_of_output, _num_of_states);
 	matrix::Vector3f _rate_setpoint;
 	float _yaw_speed_setpoint{0.f};
 
