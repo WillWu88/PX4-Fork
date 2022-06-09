@@ -44,4 +44,5 @@ px4_add_module(
 		mathlib
 		LQRControl
 		px4_work_queue
+		eigen
 	)

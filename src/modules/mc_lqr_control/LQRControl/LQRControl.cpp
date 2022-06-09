@@ -13,29 +13,48 @@
 #include <mathlib/math/Functions.hpp>
 #include <px4_platform_common/defines.h>
 
-using namespace matrix;
+
+matrix::Vector3f LQRControl::convertEigen(const Eigen::Vector3f &eigen_vector)
+{
+	matrix::Vector3f new_vec;
+	for (int i = 0; i < eigen_vector.size(); i++){
+		new_vec(i) = eigen_vector(i);
+	}
+	return new_vec;
+}
+
+Eigen::Vector3f LQRControl::convertPX4Vec(const matrix::Vector3f &px4_vector)
+{
+	Eigen::Vector3f new_vec;
+	for (int i = 0; i < 3; i++){
+		new_vec(i) << px4_vector(i);
+	}
+	return new_vec;
+}
+
+Eigen::Quaternionf LQRControl::convertQuatf(const matrix::Quatf &px4_quat)
+{
+	Eigen::Quaternionf new_vec(qd(0), qd(1), qd(2), qd(3));
+	return new_vec;
+}
+
+void LQRControl::setAttitudeSetpoint(const matrix::Quatf &qd, const float yawspeed_setpoint)
+{
+
+	_attitude_setpoint = convertQuatf(qd);
+	_attitude_setpoint.normalize();
+	_yawspeed_setpoint = yawspeed_setpoint;
+}
+
+void LQR::adaptAttitudeSetpoint(const matrix::Quatf &q_delta)
+{
+
+}
 
 
-void LQRControl::setSaturationStatus(const Vector<bool, 3> &saturation_positive,
-				      const Vector<bool, 3> &saturation_negative)
+void LQRControl::setSaturationStatus(const matrix::Vector<bool, 3> &saturation_positive,
+				      const matrix::Vector<bool, 3> &saturation_negative)
 {
 	_control_allocator_saturation_positive = saturation_positive;
 	_control_allocator_saturation_negative = saturation_negative;
-}
-
-matrix::Vector3f update(const matrix::Quatf &q_state, const matrix::Vector3f &rate_state,
-			const bool landed)
-{
-	// reduce quaternion states, since q0 is constrained by unit quaternion
-	q_state.normalize();
-	const Vector3f reduced_q_state;
-	for (int i = 0; i < 3; i++) {
-		reduced_q_state(i) = q_state(i+1);
-	}
-
-	const Vector3f torque;
-
-	return torque;
-
-
 }
