@@ -73,6 +73,14 @@ public:
   	*/
 	void setRateSetpoint(const matrix::Vector3f &new_rate_setpoint);
 
+
+	/**
+	 * Reduce quaternion by eliminating the scalar
+	 * @param quat_cord ref to the quaternion to change
+	 * @return a 3x1 vector containing the i, j, k value
+	 */
+	Eigen::Vector3f reduceQuat(const Eigen::Quaternionf &quat_cord);
+
 	/**
 	 * Construct error state for gain multiplication
 	 *
@@ -80,7 +88,7 @@ public:
 	 * @param q_state current rotation from estimator
 	 * @return error vector for gain multiplication
 	 */
-	Eigen::Matrix<float, 6, 1> construct_state(const matrix::Vector3f &rate_state,
+	Eigen::Matrix<float, 6, 1> constructState(const matrix::Vector3f &rate_state,
 												   const matrix::Quatf &q_state);
 
 	/**

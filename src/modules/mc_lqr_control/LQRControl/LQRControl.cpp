@@ -46,9 +46,38 @@ void LQRControl::setAttitudeSetpoint(const matrix::Quatf &qd, const float yawspe
 	_yawspeed_setpoint = yawspeed_setpoint;
 }
 
-void LQR::adaptAttitudeSetpoint(const matrix::Quatf &q_delta)
+void LQRControl::adaptAttitudeSetpoint(const matrix::Quatf &q_delta)
 {
+	Eigen::Quaternionf quat_shift = convertQuatf(q_delta);
+	_attitude_setpoint *= quat_shift;
+	_attitude_setpoint.normalize();
+}
 
+void LQRControl::setRateSetpoint(const matrix::Vector3f &new_rate_setpoint)
+{
+	_rate_setpoint = convertPX4Vec(new_rate_setpoint);
+}
+
+Eigen::Vector3f LQRControl::reduceQuat(const Eigen::Quaternionf &quat_cord)
+{
+	if (quat_cord.norm() == 1){
+		Eigen::Vector3f new_vec(quat_cord(1), quat_cord(2), quat_cord(3));
+		return new_vec;
+	}
+	else {
+		Eigen::Quaternionf new_vec(quat_cord); //check copy constructor
+		new_vec.normalize();
+		Eigen::Vector3f return_vec(new_vec(1), new_vec(2), new_vec(3));
+		return return_vec;
+	}
+}
+
+
+Eigen::Matrix<float, 6, 1> LQRControl::constructState(const matrix::Vector3f &rate_state, const matrix::Quatf &q_state)
+{
+	Eigen::Matrix<float, 6, 1> state_vector;
+	state_vector << reduceQuat(convertQuatf(q_state)-_attitude_setpoint), rate_state - _rate_setpoint;
+	return state_vector;
 }
 
 
@@ -57,4 +86,10 @@ void LQRControl::setSaturationStatus(const matrix::Vector<bool, 3> &saturation_p
 {
 	_control_allocator_saturation_positive = saturation_positive;
 	_control_allocator_saturation_negative = saturation_negative;
+}
+
+matrix::Vector3f LQRControl::update(const matrix::Quatf &q_state, const matrix::Vector3f &rate_state, const bool landed)
+{
+	Eigen::Vector3f torque = _lqr_gain_matrix * constructState(rate_state, q_state);
+	return convertEigen(torque);
 }
