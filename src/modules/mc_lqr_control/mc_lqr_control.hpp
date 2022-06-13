@@ -40,6 +40,7 @@
 #pragma once
 
 #include <lib/mixer/MixerBase/Mixer.hpp> // Airmode
+#include <eigen/Dense>
 #include <matrix/matrix/math.hpp>
 #include <perf/perf_counter.h>
 #include <px4_platform_common/px4_config.h>
@@ -59,27 +60,29 @@
 #include <uORB/topics/landing_gear.h>
 #include <uORB/topics/manual_control_setpoint.h>
 #include <uORB/topics/parameter_update.h>
-#include <uORB/topics/autotune_attitude_control_status.h>
 #include <uORB/topics/rate_ctrl_status.h>
-#include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_angular_acceleration.h>
 #include <uORB/topics/vehicle_angular_velocity.h>
-#include <uORB/topics/vehicle_attitude_setpoint.h>
 #include <uORB/topics/vehicle_control_mode.h>
+#include <uORB/topics/vehicle_land_detected.h>
 #include <uORB/topics/vehicle_rates_setpoint.h>
 #include <uORB/topics/vehicle_status.h>
-#include <uORB/topics/vehicle_land_detected.h>
-#include <lib/mathlib/math/filter/AlphaFilter.hpp>
-#include <AttitudeControl.hpp>
+#include <uORB/topics/vehicle_thrust_setpoint.h>
+#include <uORB/topics/vehicle_torque_setpoint.h>
+#include <uORB/topics/autotune_attitude_control_status.h>
+#include <uORB/topics/vehicle_attitude.h>
+#include <uORB/topics/vehicle_attitude_setpoint.h>
+
+#include <modules/mc_lqr_control/LQRControl/LQRControl.hpp>
 
 using namespace time_literals;
 
-class LQRControl : public ModuleBase<LQRControl>, public ModuleParams,
+class MulticopterLQRControl: public ModuleBase<MulticopterLQRControl>, public ModuleParams,
 	public px4::WorkItem
 {
 public:
-	LQRControl(bool vtol = false);
-	~LQRControl() override;
+	MulticopterLQRControl(bool vtol = false);
+	~MulticopterLQRControl() override;
 
 	/** @see ModuleBase */
 	static int task_spawn(int argc, char *argv[]);
