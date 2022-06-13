@@ -60,14 +60,28 @@ Eigen::Vector3f LQRControl::convertPX4Vec(const matrix::Vector3f &px4_vector)
 {
 	Eigen::Vector3f new_vec;
 	for (int i = 0; i < 3; i++){
-		new_vec(i) << px4_vector(i);
+		new_vec(i) = px4_vector(i);
 	}
 	return new_vec;
 }
 
 Eigen::Quaternionf LQRControl::convertQuatf(const matrix::Quatf &px4_quat)
 {
-	Eigen::Quaternionf new_vec(qd(0), qd(1), qd(2), qd(3));
+	Eigen::Quaternionf new_vec(px4_quat(0), px4_quat(1), px4_quat(2), px4_quat(3));
+	new_vec.normalize();
+	return new_vec;
+}
+
+Eigen::Vector3f LQRControl::reduceQuat(const Eigen::Quaternionf &quat_cord)
+{
+	Eigen::Quaternionf new_vec(quat_cord); //check copy constructor
+	Eigen::Vector3f return_vec(new_vec.x(), new_vec.y(), new_vec.z());
+	return return_vec;
+}
+
+Eigen::Quaternionf LQRControl::quatSubtraction(const Eigen::Quaternionf &a, const Eigen::Quaternionf &b)
+{
+	Eigen::Quaternionf new_vec(a.w()-b.w(), a.x()-b.x(), a.y()-b.y(), a.z()-b.z());
 	return new_vec;
 }
 
@@ -91,25 +105,10 @@ void LQRControl::setRateSetpoint(const matrix::Vector3f &new_rate_setpoint)
 	_rate_setpoint = convertPX4Vec(new_rate_setpoint);
 }
 
-Eigen::Vector3f LQRControl::reduceQuat(const Eigen::Quaternionf &quat_cord)
-{
-	if (quat_cord.norm() == 1){
-		Eigen::Vector3f new_vec(quat_cord(1), quat_cord(2), quat_cord(3));
-		return new_vec;
-	}
-	else {
-		Eigen::Quaternionf new_vec(quat_cord); //check copy constructor
-		new_vec.normalize();
-		Eigen::Vector3f return_vec(new_vec(1), new_vec(2), new_vec(3));
-		return return_vec;
-	}
-}
-
-
 Eigen::Matrix<float, 6, 1> LQRControl::constructState(const matrix::Vector3f &rate_state, const matrix::Quatf &q_state)
 {
 	Eigen::Matrix<float, 6, 1> state_vector;
-	state_vector << reduceQuat(convertQuatf(q_state)-_attitude_setpoint), rate_state - _rate_setpoint;
+	state_vector << reduceQuat(quatSubtraction(_attitude_setpoint, convertQuatf(q_state))), _rate_setpoint - convertPX4Vec(rate_state);
 	return state_vector;
 }
 

@@ -31,9 +31,11 @@
 #
 ############################################################################
 
+add_subdirectory(LQRControl)
+
 px4_add_module(
 	MODULE modules__mc_lqr_control
-	MAIN lqr_control
+	MAIN mc_lqr_control
 	COMPILE_FLAGS
 		${MAX_CUSTOM_OPT_LEVEL}
 	SRCS

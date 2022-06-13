@@ -80,6 +80,20 @@ public:
 	Eigen::Quaternionf convertQuatf(const matrix::Quatf &px4_quat);
 
 	/**
+	 * Normalize then reduce quaternion by eliminating the scalar
+	 * @param quat_cord ref to the quaternion to change
+	 * @return a 3x1 vector containing the i, j, k value
+	 */
+	Eigen::Vector3f reduceQuat(const Eigen::Quaternionf &quat_cord);
+
+	/**
+	 * Quaternion subtraction for Eigen
+	 * @param quaternion a
+	 * @param quaternion b
+	 */
+	Eigen::Quaternionf quatSubtraction(const Eigen::Quaternionf &a, const Eigen::Quaternionf &b);
+
+	/**
 	 * Set new lqr gain matrix (3x6)
 	 * @param new_k new gain matrix
 	 */
@@ -104,14 +118,6 @@ public:
   	* @param new_rate_setpoint
   	*/
 	void setRateSetpoint(const matrix::Vector3f &new_rate_setpoint);
-
-
-	/**
-	 * Reduce quaternion by eliminating the scalar
-	 * @param quat_cord ref to the quaternion to change
-	 * @return a 3x1 vector containing the i, j, k value
-	 */
-	Eigen::Vector3f reduceQuat(const Eigen::Quaternionf &quat_cord);
 
 	/**
 	 * Construct error state for gain multiplication
@@ -143,10 +149,10 @@ public:
 				const bool landed);
 
 private:
-	const int _num_of_output = 3;
-	const int _num_of_states = 6;
+	static constexpr const int _num_of_output = 3;
+	static constexpr const int _num_of_states = 6;
 	Eigen::Quaternionf _attitude_setpoint; //storing in the order of x, y, z, w
-	Eigen::MatrixXf _lqr_gain_matrix(_num_of_output, _num_of_states);
+	Eigen::Matrix<float, _num_of_output, _num_of_states> _lqr_gain_matrix;
 	Eigen::Vector3f _rate_setpoint;
 	float _yawspeed_setpoint{0.f};
 

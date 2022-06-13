@@ -1,4 +1,4 @@
-menuconfig MODULES_LQR_CONTROL
+menuconfig MODULES_MC_LQR_CONTROL
 	bool "mc_lqr_control"
 	default n
 	---help---
