@@ -1,5 +1,5 @@
 /****************************************************************************
- *
+*
  *   Copyright (c) 2013-2022 PX4 Development Team. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -2859,8 +2859,7 @@ Commander::run()
 			checkWindSpeedThresholds();
 		}
 
-		_vehicle_status_flags.flight_terminated = _actuator_armed.force_failsafe || _actuator_armed.manual_lockdown;
-
+		_status_flags.flight_terminated = _armed.force_failsafe || _armed.manual_lockdown;
 		/* Get current timestamp */
 		const hrt_abstime now = hrt_absolute_time();
 
