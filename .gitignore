@@ -4,6 +4,7 @@
 *.pyc
 *~
 .cache/
+compile_commands.json
 .*.swp
 .context
 .cproject
