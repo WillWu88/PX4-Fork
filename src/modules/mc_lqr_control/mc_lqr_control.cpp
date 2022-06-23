@@ -55,10 +55,8 @@ bool MulticopterLQRControl::init()
 		PX4_ERR("callback registration failed");
 		return false;
 	}
-
 	return true;
 }
-
 
 int MulticopterLQRControl::task_spawn(int argc, char **argv[])
 {
@@ -118,6 +116,11 @@ The controller uses a quad specific LQR feedback gain for attitude and rate erro
 	PRINT_MODULE_USAGE_DEFAULT_COMMANDS();
 
 	return 0;
+
+}
+
+void MulticopterLQRControl::parameters_updated()
+{
 
 }
 

@@ -193,7 +193,7 @@ public:
 	 * @brief Stars the command, ('command start'), checks if if is already
 	 *        running and calls T::task_spawn() if it's not.
 	 * @param argc The task argument count.
-	 * @param argc Pointer to the task argument variable array.
+	 * @param argv Pointer to the task argument variable array.
 	 * @return Returns 0 iff successful, -1 otherwise.
 	 */
 	static int start_command_base(int argc, char *argv[])

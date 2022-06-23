@@ -105,6 +105,15 @@ void LQRControl::setRateSetpoint(const matrix::Vector3f &new_rate_setpoint)
 	_rate_setpoint = convertPX4Vec(new_rate_setpoint);
 }
 
+void LQRControl::setLQRGain(const Eigen::Matrix<float, 3, 6> &new_k)
+{
+	if (new_k.rows() == _num_of_output && _num_of_states == 6) {
+		_lqr_gain_matrix = new_k;
+	} else {
+		// set gain to 0 if new input doesn't meet the dimension requirement
+		_lqr_gain_matrix = Eigen::MatrixXf::Zero(_num_of_output, _num_of_states);
+	}
+}
 Eigen::Matrix<float, 6, 1> LQRControl::constructState(const matrix::Vector3f &rate_state, const matrix::Quatf &q_state)
 {
 	Eigen::Matrix<float, 6, 1> state_vector;

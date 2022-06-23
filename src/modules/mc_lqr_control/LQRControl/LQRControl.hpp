@@ -97,7 +97,7 @@ public:
 	 * Set new lqr gain matrix (3x6)
 	 * @param new_k new gain matrix
 	 */
-	void setLQRGain(const Eigen::Matrix<float, 3 , 6> &new_k) {_lqr_gain_matrix = new_k;}
+	void setLQRGain(const Eigen::Matrix<float, 3 , 6> &new_k);
 
 	/**
 	 * Set a new attitude setpoint replacing the one tracked before

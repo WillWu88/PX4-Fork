@@ -98,7 +98,38 @@ public:
 private:
 	void Run() override;
 
+	/**
+	 * initialize vectors/matrices
+	 */
+	void parameters_updated() {}
+
+    // Messaging specifics
+
+	// sampling interval
+	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
+
+	// call back work items, status dependent
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
+
+
+	// lqr controller
+	LQRControl _lqr_controller;
+
+	DEFINE_PARAMETERS(
+		(ParamInt<px4::params::MC_AIRMODE>)         _param_mc_airmode,
+
+		(ParamFloat<px4::params::MC_ROLLRATE_MAX>)  _param_mc_rollrate_max,
+		(ParamFloat<px4::params::MC_PITCHRATE_MAX>) _param_mc_pitchrate_max,
+		(ParamFloat<px4::params::MC_YAWRATE_MAX>)   _param_mc_yawrate_max,
+
+		/* Stabilized mode params */
+		(ParamFloat<px4::params::MPC_MAN_TILT_MAX>) _param_mpc_man_tilt_max,    /**< maximum tilt allowed for manual flight */
+		(ParamFloat<px4::params::MPC_MAN_Y_MAX>)    _param_mpc_man_y_max,       /**< scaling factor from stick to yaw rate */
+		(ParamFloat<px4::params::MPC_MANTHR_MIN>)   _param_mpc_manthr_min,      /**< minimum throttle for stabilized */
+		(ParamFloat<px4::params::MPC_THR_MAX>)      _param_mpc_thr_max,         /**< maximum throttle for stabilized */
+		(ParamFloat<px4::params::MPC_THR_HOVER>)    _param_mpc_thr_hover,       /**< throttle at stationary hover */
+		(ParamInt<px4::params::MPC_THR_CURVE>)      _param_mpc_thr_curve        /**< throttle curve behavior */
+	)
 
 };
