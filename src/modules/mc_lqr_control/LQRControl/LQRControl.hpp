@@ -136,6 +136,10 @@ public:
 	void setSaturationStatus(const matrix::Vector<bool, 3> &saturation_positive,
 				 const matrix::Vector<bool, 3> &saturation_negative);
 
+	int returnOutputWidth() {return _num_of_output;}
+
+	int returnStateWidth() {return _num_of_states;}
+
 	/**
 	 * Run the controller once
 	 *

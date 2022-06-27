@@ -103,7 +103,16 @@ private:
 	 */
 	void parameters_updated() {}
 
+	// throttle curve adjustment, taken from mc_att_control
+	float throttle_curve(float throttle_stick_input);
+
+	// generate attitude setpoint based on position
+	void generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp);
     // Messaging specifics
+
+	// log and performance counters
+	hrt_abstime _last_run{0};
+	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
 
 	// sampling interval
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
@@ -115,6 +124,31 @@ private:
 
 	// lqr controller
 	LQRControl _lqr_controller;
+
+	// attitude setpoint conversion parameters
+	float _man_yaw_sp{0.f};                 /**< current yaw setpoint in manual mode */
+	float _man_tilt_max;                    /**< maximum tilt allowed for manual flight [rad] */
+	AlphaFilter<float> _man_x_input_filter;
+	AlphaFilter<float> _man_y_input_filter;
+	matrix::Vector3f _thrust_setpoint_body; /**< body frame 3D thrust vector */
+	hrt_abstime _last_run{0};
+	hrt_abstime _last_attitude_setpoint{0};
+
+	// manual control switch and flight mode switch
+	manual_control_setpoint_s       _manual_control_setpoint {};    /**< manual control setpoint */
+	vehicle_control_mode_s          _vehicle_control_mode {};       /**< vehicle control mode */
+
+	// rate control parameters
+	bool _actuators_0_circuit_breaker_enabled{false};	/**< circuit breaker to suppress output */
+	bool _landed{true};
+	bool _maybe_landed{true};
+
+
+	// LQR Controller Gain
+	Eigen::MatrixXf _lqr_gain; _lqr_gain << 0,0,0,0,0,0
+								   0,0,0,0,0,0
+								   0,0,0,0,0,0;
+
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::MC_AIRMODE>)         _param_mc_airmode,
