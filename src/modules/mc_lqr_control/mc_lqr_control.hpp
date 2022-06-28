@@ -108,6 +108,14 @@ private:
 
 	// generate attitude setpoint based on position
 	void generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp);
+
+	// publish control signals
+	void updateActuatorControlsStatus(const actuator_controls_s &actuators, float dt);
+
+	void publishTorqueSetpoint(const matrix::Vector3f &torque_sp, const hrt_abstime &timestamp_sample);
+
+	void publishThrustSetpoint(const float thrust_setpoint, const hrt_abstime &timestamp_sample);
+
     // Messaging specifics
 
 	// log and performance counters
@@ -120,6 +128,14 @@ private:
 	// call back work items, status dependent
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
+
+	// publication topics
+	uORB::Publication<actuator_controls_s>		_actuator_controls_0_pub;
+	uORB::Publication<actuator_controls_status_s>	_actuator_controls_status_0_pub{ORB_ID(actuator_controls_status_0)};
+	uORB::PublicationMulti<rate_ctrl_status_s>	_controller_status_pub{ORB_ID(rate_ctrl_status)};
+	uORB::Publication<vehicle_rates_setpoint_s>	_vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};
+	uORB::Publication<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint_pub{ORB_ID(vehicle_thrust_setpoint)};
+	uORB::Publication<vehicle_torque_setpoint_s>	_vehicle_torque_setpoint_pub{ORB_ID(vehicle_torque_setpoint)};
 
 
 	// lqr controller
@@ -143,11 +159,18 @@ private:
 	bool _landed{true};
 	bool _maybe_landed{true};
 
+	// rate control integrator anti windup parameters
+	float _energy_integration_time{0.0f};
+	float _control_energy[4] {};
+
 
 	// LQR Controller Gain
 	Eigen::MatrixXf _lqr_gain; _lqr_gain << 0,0,0,0,0,0
 								   0,0,0,0,0,0
 								   0,0,0,0,0,0;
+
+	//attitude rate setpoint, always set to 0
+	matrix::Vector3f _rates_setpoint(0.0f, 0.0f, 0.0f);
 
 
 	DEFINE_PARAMETERS(

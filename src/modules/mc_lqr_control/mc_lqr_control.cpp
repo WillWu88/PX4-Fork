@@ -207,6 +207,53 @@ void MulticopterLQRControl::generate_attitude_setpoint(const Quatf &q, float dt,
 	_last_attitude_setpoint = attitude_setpoint.timestamp;
 }
 
+void MulticopterLQRControl::publishTorqueSetpoint(const Vector3f &torque_sp, const hrt_abstime &timestamp_sample)
+{
+	vehicle_torque_setpoint_s vehicle_torque_setpoint{};
+	vehicle_torque_setpoint.timestamp = hrt_absolute_time();
+	vehicle_torque_setpoint.timestamp_sample = timestamp_sample;
+	vehicle_torque_setpoint.xyz[0] = (PX4_ISFINITE(torque_sp(0))) ? torque_sp(0) : 0.0f;
+	vehicle_torque_setpoint.xyz[1] = (PX4_ISFINITE(torque_sp(1))) ? torque_sp(1) : 0.0f;
+	vehicle_torque_setpoint.xyz[2] = (PX4_ISFINITE(torque_sp(2))) ? torque_sp(2) : 0.0f;
+
+	_vehicle_torque_setpoint_pub.publish(vehicle_torque_setpoint);
+}
+
+void MulticopterLQRControl::publishThrustSetpoint(const float thrust_setpoint, const hrt_abstime &timestamp_sample)
+{
+	vehicle_thrust_setpoint_s vehicle_thrust_setpoint{};
+	vehicle_thrust_setpoint.timestamp = hrt_absolute_time();
+	vehicle_thrust_setpoint.timestamp_sample = timestamp_sample;
+	vehicle_thrust_setpoint.xyz[0] = 0.0f;
+	vehicle_thrust_setpoint.xyz[1] = 0.0f;
+	vehicle_thrust_setpoint.xyz[2] = PX4_ISFINITE(thrust_setpoint) ? -thrust_setpoint : 0.0f; // Z is Down
+
+	_vehicle_thrust_setpoint_pub.publish(vehicle_thrust_setpoint);
+}
+
+void MulticopterLQRControl::updateActuatorControlsStatus(const actuator_controls_s &actuators, float dt)
+{
+	for (int i = 0; i < 4; i++) {
+		_control_energy[i] += actuators.control[i] * actuators.control[i] * dt;
+	}
+
+	_energy_integration_time += dt;
+
+	if (_energy_integration_time > 500e-3f) {
+
+		actuator_controls_status_s status;
+		status.timestamp = actuators.timestamp;
+
+		for (int i = 0; i < 4; i++) {
+			status.control_power[i] = _control_energy[i] / _energy_integration_time;
+			_control_energy[i] = 0.f;
+		}
+
+		_actuator_controls_status_0_pub.publish(status);
+		_energy_integration_time = 0.f;
+	}
+}
+
 void MulticopterLQRControl::Run()
 {
 	if (should_exit()) {
@@ -231,6 +278,73 @@ void MulticopterLQRControl::Run()
 	/* run controller on attitude and rate changes */
 	vehicle_attitude_s v_att;
 	vehicle_angular_velocity_s angular_velocity;
+
+	if (_vehicle_attitude_sub.update(&v_att) || _vehicle_angular_velocity_sub.update(&angular_velocity)) {
+		// grab corresponding vehicle_angular_acceleration immediately after vehicle_angular_velocity copy
+		vehicle_angular_acceleration_s v_angular_acceleration{};
+		_vehicle_angular_acceleration_sub.copy(&v_angular_acceleration);
+
+		// Guard against too small (< 0.2ms) and too large (> 20ms) dt's.
+		// run at 200 Hz
+		const float dt = math::constrain(((now - _last_run) * 1e-6f), 0.0002f, 0.02f);
+		// compare updated time, take the most recent one
+		_last_run = (angular_velocity.timestamp_sample > v_att.timestamp_sample) ? angular_velocity.timestamp_sample : v_att.timestamp_sample;
+
+		const matrix::Quatf q{v_att.q};
+		const matrix::Vector3f angular_accel{v_angular_acceleration.xyz};
+		const matrix::Vector3f rates{angular_velocity.xyz};
+
+		// Check for new attitude setpoint
+		if (_vehicle_attitude_setpoint_sub.updated()) {
+			vehicle_attitude_setpoint_s vehicle_attitude_setpoint;
+
+			if (_vehicle_attitude_setpoint_sub.copy(&vehicle_attitude_setpoint)
+			    && (vehicle_attitude_setpoint.timestamp > _last_attitude_setpoint)) {
+
+				_lqr_controller.setAttitudeSetpoint(Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
+				_thrust_setpoint_body = Vector3f(vehicle_attitude_setpoint.thrust_body);
+				_last_attitude_setpoint = vehicle_attitude_setpoint.timestamp;
+			}
+		}
+
+		// Check for a heading reset
+		if (_quat_reset_counter != v_att.quat_reset_counter) {
+			const Quatf delta_q_reset(v_att.delta_q_reset);
+
+			// for stabilized attitude generation only extract the heading change from the delta quaternion
+			_man_yaw_sp = wrap_pi(_man_yaw_sp + Eulerf(delta_q_reset).psi());
+
+			if (v_att.timestamp > _last_attitude_setpoint) {
+				// adapt existing attitude setpoint unless it was generated after the current attitude estimate
+				_attitude_control.adaptAttitudeSetpoint(delta_q_reset);
+			}
+
+			_quat_reset_counter = v_att.quat_reset_counter;
+		}
+
+		/* check for updates in other topics */
+		_vehicle_control_mode_sub.update(&_vehicle_control_mode);
+
+		if (_vehicle_land_detected_sub.updated()) {
+			vehicle_land_detected_s vehicle_land_detected;
+
+			if (_vehicle_land_detected_sub.copy(&vehicle_land_detected)) {
+				_landed = vehicle_land_detected.landed;
+			}
+		}
+
+		if (_vehicle_status_sub.updated()) {
+			vehicle_status_s vehicle_status;
+
+			if (_vehicle_status_sub.copy(&vehicle_status)) {
+				_vehicle_type_rotary_wing = (vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING);
+				_vtol = vehicle_status.is_vtol;
+				_vtol_in_transition_mode = vehicle_status.in_transition_mode;
+				_vtol_tailsitter = vehicle_status.is_vtol_tailsitter;
+
+			}
+		}
+	}
 }
 /**
  * Multicopter lqr control app start / stop handling function
