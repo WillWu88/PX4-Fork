@@ -48,6 +48,16 @@
 #include <mathlib/math/Functions.hpp>
 
 // needs confirming: can two registerCallback exist at the same time?
+MulticopterLQRControl::MulticopterLQRControl(bool vtol) :
+	ModuleParams(nullptr),
+	WorkItem(MODULE_NAME, px4::wq_configurations::nav_and_controllers),
+	_loop_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")),
+	_vtol(vtol)
+{
+
+}
+
+Multicopter
 bool MulticopterLQRControl::init()
 {
 	if (!_vehicle_attitude_sub.registerCallback() ||

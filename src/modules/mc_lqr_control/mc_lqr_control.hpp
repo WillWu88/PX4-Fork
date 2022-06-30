@@ -129,10 +129,17 @@ private:
 	uORB::SubscriptionCallbackWorkItem _vehicle_attitude_sub{this, ORB_ID(vehicle_attitude)};
 	uORB::SubscriptionCallbackWorkItem _vehicle_angular_velocity_sub{this, ORB_ID(vehicle_angular_velocity)};
 
+	// subscribed topics
+	uORB::Subscription _vehicle_attitude_setpoint_sub{ORB_ID(vehicle_attitude_setpoint)};   /**< vehicle attitude setpoint subscription */
+	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};             /**< vehicle control mode subscription */
+	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};                         /**< vehicle status subscription */
+	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};           /**< vehicle land detected subscription */
+
 	// publication topics
 	uORB::Publication<actuator_controls_s>		_actuator_controls_0_pub;
 	uORB::Publication<actuator_controls_status_s>	_actuator_controls_status_0_pub{ORB_ID(actuator_controls_status_0)};
 	uORB::PublicationMulti<rate_ctrl_status_s>	_controller_status_pub{ORB_ID(rate_ctrl_status)};
+	uORB::Publication<vehicle_attitude_setpoint_s> _vehicle_attitude_setpoint_pub{ORB_ID(vehicle_attitude_setpoint)};
 	uORB::Publication<vehicle_rates_setpoint_s>	_vehicle_rates_setpoint_pub{ORB_ID(vehicle_rates_setpoint)};
 	uORB::Publication<vehicle_thrust_setpoint_s>	_vehicle_thrust_setpoint_pub{ORB_ID(vehicle_thrust_setpoint)};
 	uORB::Publication<vehicle_torque_setpoint_s>	_vehicle_torque_setpoint_pub{ORB_ID(vehicle_torque_setpoint)};
@@ -149,6 +156,8 @@ private:
 	matrix::Vector3f _thrust_setpoint_body; /**< body frame 3D thrust vector */
 	hrt_abstime _last_run{0};
 	hrt_abstime _last_attitude_setpoint{0};
+	// heading reset counter
+	uint8_t _quat_reset_counter{0};
 
 	// manual control switch and flight mode switch
 	manual_control_setpoint_s       _manual_control_setpoint {};    /**< manual control setpoint */

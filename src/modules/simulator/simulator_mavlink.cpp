@@ -960,7 +960,7 @@ void Simulator::run()
 
 		if (pret == 0) {
 			// Timed out.
-			PX4_ERR("poll timeout %d, %d", pret, errno);
+			//PX4_ERR("poll timeout %d, %d", pret, errno);
 			continue;
 		}
 
