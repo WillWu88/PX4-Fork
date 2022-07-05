@@ -193,6 +193,7 @@ set(msg_files
 	vehicle_imu_status.msg
 	vehicle_land_detected.msg
 	vehicle_local_position.msg
+	vehicle_lqr_enabled.msg
 	vehicle_local_position_setpoint.msg
 	vehicle_magnetometer.msg
 	vehicle_odometry.msg

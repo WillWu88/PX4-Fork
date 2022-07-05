@@ -72,6 +72,7 @@
 #include <uORB/topics/autotune_attitude_control_status.h>
 #include <uORB/topics/vehicle_attitude.h>
 #include <uORB/topics/vehicle_attitude_setpoint.h>
+#include <uORB/topics/vehicle_lqr_enabled.h>
 
 #include <modules/mc_lqr_control/LQRControl/LQRControl.hpp>
 
@@ -106,9 +107,6 @@ private:
 	// throttle curve adjustment, taken from mc_att_control
 	float throttle_curve(float throttle_stick_input);
 
-	// generate attitude setpoint based on position
-	void generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp);
-
 	// publish control signals
 	void updateActuatorControlsStatus(const actuator_controls_s &actuators, float dt);
 
@@ -116,6 +114,8 @@ private:
 
 	void publishThrustSetpoint(const float thrust_setpoint, const hrt_abstime &timestamp_sample);
 
+	// vehicle specifics
+	bool _vtol{false};
     // Messaging specifics
 
 	// log and performance counters
@@ -134,9 +134,10 @@ private:
 	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};             /**< vehicle control mode subscription */
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};                         /**< vehicle status subscription */
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};           /**< vehicle land detected subscription */
+	uORB::Subscription _landing_gear_sub{ORB_ID(landing_gear)};
 
 	// publication topics
-	uORB::Publication<actuator_controls_s>		_actuator_controls_0_pub;
+	uORB::Publication<actuator_controls_s>		_actuator_controls_0_pub{ORB_ID(actuator_controls_0)};
 	uORB::Publication<actuator_controls_status_s>	_actuator_controls_status_0_pub{ORB_ID(actuator_controls_status_0)};
 	uORB::PublicationMulti<rate_ctrl_status_s>	_controller_status_pub{ORB_ID(rate_ctrl_status)};
 	uORB::Publication<vehicle_attitude_setpoint_s> _vehicle_attitude_setpoint_pub{ORB_ID(vehicle_attitude_setpoint)};
@@ -167,11 +168,20 @@ private:
 	bool _actuators_0_circuit_breaker_enabled{false};	/**< circuit breaker to suppress output */
 	bool _landed{true};
 	bool _maybe_landed{true};
-
+	float _battery_status_scale{0.0f};
+	float _thrust_setpoint{0.0f};
+	int8_t _landing_gear{landing_gear_s::GEAR_DOWN};
 	// rate control integrator anti windup parameters
 	float _energy_integration_time{0.0f};
 	float _control_energy[4] {};
+	matrix::Vector3f _rates_setpoint {};
 
+	//default rates setpoint, regulate to 0
+	matrix::Vector3f _default_rates {matrix::Vector3f(0,0,0)};
+
+
+	// LQR control parameters
+	bool _lqr_test{true};
 
 	// LQR Controller Gain
 	Eigen::MatrixXf _lqr_gain; _lqr_gain << 0,0,0,0,0,0

@@ -150,73 +150,6 @@ float MulticopterLQRControl::throttle_curve(float throttle_stick_input)
 	}
 }
 
-void MulticopterLQRControl::generate_attitude_setpoint(const Quatf &q, float dt, bool reset_yaw_sp)
-{
-	vehicle_attitude_setpoint_s attitude_setpoint{};
-	const float yaw = Eulerf(q).psi();
-
-	/* reset yaw setpoint to current position if needed */
-	if (reset_yaw_sp) {
-		_man_yaw_sp = yaw;
-
-	} else if (math::constrain(_manual_control_setpoint.z, 0.0f, 1.0f) > 0.05f
-		   || _param_mc_airmode.get() == (int32_t)Mixer::Airmode::roll_pitch_yaw) {
-
-		const float yaw_rate = math::radians(_param_mpc_man_y_max.get());
-		attitude_setpoint.yaw_sp_move_rate = _manual_control_setpoint.r * yaw_rate;
-		_man_yaw_sp = wrap_pi(_man_yaw_sp + attitude_setpoint.yaw_sp_move_rate * dt);
-	}
-
-	/*
-	 * Input mapping for roll & pitch setpoints
-	 * ----------------------------------------
-	 * We control the following 2 angles:
-	 * - tilt angle, given by sqrt(x*x + y*y)
-	 * - the direction of the maximum tilt in the XY-plane, which also defines the direction of the motion
-	 *
-	 * This allows a simple limitation of the tilt angle, the vehicle flies towards the direction that the stick
-	 * points to, and changes of the stick input are linear.
-	 */
-	_man_x_input_filter.setParameters(dt, _param_mc_man_tilt_tau.get());
-	_man_y_input_filter.setParameters(dt, _param_mc_man_tilt_tau.get());
-	_man_x_input_filter.update(_manual_control_setpoint.x * _man_tilt_max);
-	_man_y_input_filter.update(_manual_control_setpoint.y * _man_tilt_max);
-	const float x = _man_x_input_filter.getState();
-	const float y = _man_y_input_filter.getState();
-
-	// we want to fly towards the direction of (x, y), so we use a perpendicular axis angle vector in the XY-plane
-	Vector2f v = Vector2f(y, -x);
-	float v_norm = v.norm(); // the norm of v defines the tilt angle
-
-	if (v_norm > _man_tilt_max) { // limit to the configured maximum tilt angle
-		v *= _man_tilt_max / v_norm;
-	}
-
-	Quatf q_sp_rpy = AxisAnglef(v(0), v(1), 0.f);
-	Eulerf euler_sp = q_sp_rpy;
-	attitude_setpoint.roll_body = euler_sp(0);
-	attitude_setpoint.pitch_body = euler_sp(1);
-	// The axis angle can change the yaw as well (noticeable at higher tilt angles).
-	// This is the formula by how much the yaw changes:
-	//   let a := tilt angle, b := atan(y/x) (direction of maximum tilt)
-	//   yaw = atan(-2 * sin(b) * cos(b) * sin^2(a/2) / (1 - 2 * cos^2(b) * sin^2(a/2))).
-	attitude_setpoint.yaw_body = _man_yaw_sp + euler_sp(2);
-
-	/* copy quaternion setpoint to attitude setpoint topic */
-	Quatf q_sp = Eulerf(attitude_setpoint.roll_body, attitude_setpoint.pitch_body, attitude_setpoint.yaw_body);
-	q_sp.copyTo(attitude_setpoint.q_d);
-
-	attitude_setpoint.thrust_body[2] = -throttle_curve(math::constrain(_manual_control_setpoint.z, 0.f, 1.f));
-	attitude_setpoint.timestamp = hrt_absolute_time();
-
-	_vehicle_attitude_setpoint_pub.publish(attitude_setpoint);
-
-	// update attitude controller setpoint immediately
-	_lqr_controller.setAttitudeSetpoint(q_sp, attitutde_setpoint.yaw_sp_move_rate);
-	_thrust_setpoint_body = Vector3f(attitude_setpoint.thrust_body);
-	_last_attitude_setpoint = attitude_setpoint.timestamp;
-}
-
 void MulticopterLQRControl::publishTorqueSetpoint(const Vector3f &torque_sp, const hrt_abstime &timestamp_sample)
 {
 	vehicle_torque_setpoint_s vehicle_torque_setpoint{};
@@ -304,7 +237,7 @@ void MulticopterLQRControl::Run()
 		const matrix::Vector3f angular_accel{v_angular_acceleration.xyz};
 		const matrix::Vector3f rates{angular_velocity.xyz};
 
-		// Check for new attitude setpoint
+		// Check for new attitude setpoint, update rates setpoint
 		if (_vehicle_attitude_setpoint_sub.updated()) {
 			vehicle_attitude_setpoint_s vehicle_attitude_setpoint;
 
@@ -313,7 +246,10 @@ void MulticopterLQRControl::Run()
 
 				_lqr_controller.setAttitudeSetpoint(Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
 				_thrust_setpoint_body = Vector3f(vehicle_attitude_setpoint.thrust_body);
+				_thrust_setpoint = _thrust_setpoint_body[2];
+				_rates_setpoint = _default_rates;
 				_last_attitude_setpoint = vehicle_attitude_setpoint.timestamp;
+				_lqr_controller.setRateSetpoint(_rates_setpoint);
 			}
 		}
 
@@ -354,7 +290,40 @@ void MulticopterLQRControl::Run()
 
 			}
 		}
+
+		bool run_lqr = _lqr_test || _vehicle_control_mode.flag_control_lqr_enabled;
+
+		if (run_lqr) {
+			const matrix::Vector3f control_torque = _lqr_controller.update(q, rates, _landed);
+
+			// rate controller status?
+			actuator_controls_s actuators{};
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_setpoint) ? _thrust_setpoint : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _landing_gear;
+			actuators.timestamp_sample = angular_velocity.timestamp_sample;
+
+			publishTorqueSetpoint(att_control, angular_velocity.timestamp_sample);
+			publishThrustSetpoint(_thrust_setpoint, angular_velocity.timestamp_sample);
+
+			// battery control scalling
+
+			actuators.timestamp = hrt_absolute_time();
+			_actuator_controls_0_pub.publish(actuators);
+
+			updateActuatorControlsStatus(actuators, dt);
+		} else if (_vehicle_control_mode.flag_control_termination_enabled) {
+			if (!_vehicle_status.is_vtol) {
+				// publish actuator controls
+				actuator_controls_s actuators{};
+				actuators.timestamp = hrt_absolute_time();
+				_actuator_controls_0_pub.publish(actuators);
+			}
+		}
 	}
+	perf_end(_loop_perf);
 }
 /**
  * Multicopter lqr control app start / stop handling function
