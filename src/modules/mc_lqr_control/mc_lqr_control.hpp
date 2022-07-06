@@ -40,6 +40,7 @@
 #pragma once
 
 #include <lib/mixer/MixerBase/Mixer.hpp> // Airmode
+#include <lib/mathlib/math/filter/AlphaFilter.hpp>
 #include <eigen/Dense>
 #include <matrix/matrix/math.hpp>
 #include <perf/perf_counter.h>
@@ -51,6 +52,7 @@
 #include <px4_platform_common/px4_work_queue/WorkItem.hpp>
 #include <px4_platform_common/px4_work_queue/ScheduledWorkItem.hpp>
 #include <uORB/Publication.hpp>
+#include <uORB/PublicationMulti.hpp>
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
 #include <uORB/topics/actuator_controls.h>
@@ -102,7 +104,7 @@ private:
 	/**
 	 * initialize vectors/matrices
 	 */
-	void parameters_updated() {}
+	void parameters_updated();
 
 	// throttle curve adjustment, taken from mc_att_control
 	float throttle_curve(float throttle_stick_input);
@@ -114,13 +116,14 @@ private:
 
 	void publishThrustSetpoint(const float thrust_setpoint, const hrt_abstime &timestamp_sample);
 
-	// vehicle specifics
-	bool _vtol{false};
     // Messaging specifics
 
 	// log and performance counters
 	hrt_abstime _last_run{0};
 	perf_counter_t	_loop_perf;			/**< loop duration performance counter */
+
+	// vehicle specifics
+	bool _vtol{false};
 
 	// sampling interval
 	uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
@@ -135,6 +138,7 @@ private:
 	uORB::Subscription _vehicle_status_sub{ORB_ID(vehicle_status)};                         /**< vehicle status subscription */
 	uORB::Subscription _vehicle_land_detected_sub{ORB_ID(vehicle_land_detected)};           /**< vehicle land detected subscription */
 	uORB::Subscription _landing_gear_sub{ORB_ID(landing_gear)};
+	uORB::Subscription _vehicle_angular_acceleration_sub{ORB_ID(vehicle_angular_acceleration)};
 
 	// publication topics
 	uORB::Publication<actuator_controls_s>		_actuator_controls_0_pub{ORB_ID(actuator_controls_0)};
@@ -155,7 +159,6 @@ private:
 	AlphaFilter<float> _man_x_input_filter;
 	AlphaFilter<float> _man_y_input_filter;
 	matrix::Vector3f _thrust_setpoint_body; /**< body frame 3D thrust vector */
-	hrt_abstime _last_run{0};
 	hrt_abstime _last_attitude_setpoint{0};
 	// heading reset counter
 	uint8_t _quat_reset_counter{0};
@@ -184,13 +187,7 @@ private:
 	bool _lqr_test{true};
 
 	// LQR Controller Gain
-	Eigen::MatrixXf _lqr_gain; _lqr_gain << 0,0,0,0,0,0
-								   0,0,0,0,0,0
-								   0,0,0,0,0,0;
-
-	//attitude rate setpoint, always set to 0
-	matrix::Vector3f _rates_setpoint(0.0f, 0.0f, 0.0f);
-
+	Eigen::MatrixXf _lqr_gain;
 
 	DEFINE_PARAMETERS(
 		(ParamInt<px4::params::MC_AIRMODE>)         _param_mc_airmode,

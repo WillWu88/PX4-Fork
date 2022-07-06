@@ -34,7 +34,7 @@
 /**
  * @file mc_lqr_control_main.cpp
  * Multicopter lqr controller.
- * Replacing mc_att_controller and mc_rate_controller
+ * Replacing mc_control_torqueler and mc_rate_controller
  *
  * System Theory Lab, Jun 2022
  *
@@ -54,10 +54,13 @@ MulticopterLQRControl::MulticopterLQRControl(bool vtol) :
 	_loop_perf(perf_alloc(PC_ELAPSED, MODULE_NAME": cycle")),
 	_vtol(vtol)
 {
-
 }
 
-Multicopter
+MulticopterLQRControl::~MulticopterLQRControl()
+{
+	perf_free(_loop_perf);
+}
+
 bool MulticopterLQRControl::init()
 {
 	if (!_vehicle_attitude_sub.registerCallback() ||
@@ -68,7 +71,7 @@ bool MulticopterLQRControl::init()
 	return true;
 }
 
-int MulticopterLQRControl::task_spawn(int argc, char **argv[])
+int MulticopterLQRControl::task_spawn(int argc, char *argv[])
 {
 	bool vtol = false;
 
@@ -99,7 +102,7 @@ int MulticopterLQRControl::task_spawn(int argc, char **argv[])
 	return PX4_ERROR;
 }
 
-int MulticopterLQRControl::custom_command(int argc, char **argv[])
+int MulticopterLQRControl::custom_command(int argc, char *argv[])
 {
 	return print_usage("unknown command");
 }
@@ -150,7 +153,7 @@ float MulticopterLQRControl::throttle_curve(float throttle_stick_input)
 	}
 }
 
-void MulticopterLQRControl::publishTorqueSetpoint(const Vector3f &torque_sp, const hrt_abstime &timestamp_sample)
+void MulticopterLQRControl::publishTorqueSetpoint(const matrix::Vector3f &torque_sp, const hrt_abstime &timestamp_sample)
 {
 	vehicle_torque_setpoint_s vehicle_torque_setpoint{};
 	vehicle_torque_setpoint.timestamp = hrt_absolute_time();
@@ -227,6 +230,7 @@ void MulticopterLQRControl::Run()
 		vehicle_angular_acceleration_s v_angular_acceleration{};
 		_vehicle_angular_acceleration_sub.copy(&v_angular_acceleration);
 
+		const hrt_abstime now = angular_velocity.timestamp_sample;
 		// Guard against too small (< 0.2ms) and too large (> 20ms) dt's.
 		// run at 200 Hz
 		const float dt = math::constrain(((now - _last_run) * 1e-6f), 0.0002f, 0.02f);
@@ -244,9 +248,9 @@ void MulticopterLQRControl::Run()
 			if (_vehicle_attitude_setpoint_sub.copy(&vehicle_attitude_setpoint)
 			    && (vehicle_attitude_setpoint.timestamp > _last_attitude_setpoint)) {
 
-				_lqr_controller.setAttitudeSetpoint(Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
-				_thrust_setpoint_body = Vector3f(vehicle_attitude_setpoint.thrust_body);
-				_thrust_setpoint = _thrust_setpoint_body[2];
+				_lqr_controller.setAttitudeSetpoint(matrix::Quatf(vehicle_attitude_setpoint.q_d), vehicle_attitude_setpoint.yaw_sp_move_rate);
+				_thrust_setpoint_body = matrix::Vector3f(vehicle_attitude_setpoint.thrust_body);
+				_thrust_setpoint = _thrust_setpoint_body(2);
 				_rates_setpoint = _default_rates;
 				_last_attitude_setpoint = vehicle_attitude_setpoint.timestamp;
 				_lqr_controller.setRateSetpoint(_rates_setpoint);
@@ -255,14 +259,14 @@ void MulticopterLQRControl::Run()
 
 		// Check for a heading reset
 		if (_quat_reset_counter != v_att.quat_reset_counter) {
-			const Quatf delta_q_reset(v_att.delta_q_reset);
+			const matrix::Quatf delta_q_reset(v_att.delta_q_reset);
 
 			// for stabilized attitude generation only extract the heading change from the delta quaternion
-			_man_yaw_sp = wrap_pi(_man_yaw_sp + Eulerf(delta_q_reset).psi());
+			_man_yaw_sp = matrix::wrap_pi(_man_yaw_sp + matrix::Eulerf(delta_q_reset).psi());
 
 			if (v_att.timestamp > _last_attitude_setpoint) {
 				// adapt existing attitude setpoint unless it was generated after the current attitude estimate
-				_attitude_control.adaptAttitudeSetpoint(delta_q_reset);
+				_lqr_controller.adaptAttitudeSetpoint(delta_q_reset);
 			}
 
 			_quat_reset_counter = v_att.quat_reset_counter;
@@ -283,11 +287,7 @@ void MulticopterLQRControl::Run()
 			vehicle_status_s vehicle_status;
 
 			if (_vehicle_status_sub.copy(&vehicle_status)) {
-				_vehicle_type_rotary_wing = (vehicle_status.vehicle_type == vehicle_status_s::VEHICLE_TYPE_ROTARY_WING);
 				_vtol = vehicle_status.is_vtol;
-				_vtol_in_transition_mode = vehicle_status.in_transition_mode;
-				_vtol_tailsitter = vehicle_status.is_vtol_tailsitter;
-
 			}
 		}
 
@@ -298,14 +298,14 @@ void MulticopterLQRControl::Run()
 
 			// rate controller status?
 			actuator_controls_s actuators{};
-			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(att_control(0)) ? att_control(0) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(att_control(1)) ? att_control(1) : 0.0f;
-			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(att_control(2)) ? att_control(2) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_ROLL] = PX4_ISFINITE(control_torque(0)) ? control_torque(0) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_PITCH] = PX4_ISFINITE(control_torque(1)) ? control_torque(1) : 0.0f;
+			actuators.control[actuator_controls_s::INDEX_YAW] = PX4_ISFINITE(control_torque(2)) ? control_torque(2) : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_THROTTLE] = PX4_ISFINITE(_thrust_setpoint) ? _thrust_setpoint : 0.0f;
 			actuators.control[actuator_controls_s::INDEX_LANDING_GEAR] = _landing_gear;
 			actuators.timestamp_sample = angular_velocity.timestamp_sample;
 
-			publishTorqueSetpoint(att_control, angular_velocity.timestamp_sample);
+			publishTorqueSetpoint(control_torque, angular_velocity.timestamp_sample);
 			publishThrustSetpoint(_thrust_setpoint, angular_velocity.timestamp_sample);
 
 			// battery control scalling
@@ -314,13 +314,6 @@ void MulticopterLQRControl::Run()
 			_actuator_controls_0_pub.publish(actuators);
 
 			updateActuatorControlsStatus(actuators, dt);
-		} else if (_vehicle_control_mode.flag_control_termination_enabled) {
-			if (!_vehicle_status.is_vtol) {
-				// publish actuator controls
-				actuator_controls_s actuators{};
-				actuators.timestamp = hrt_absolute_time();
-				_actuator_controls_0_pub.publish(actuators);
-			}
 		}
 	}
 	perf_end(_loop_perf);
