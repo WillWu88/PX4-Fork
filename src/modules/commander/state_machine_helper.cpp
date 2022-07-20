@@ -226,6 +226,15 @@ main_state_transition(const vehicle_status_s &status, const main_state_t new_mai
 
 		break;
 
+	case commander_state_s::MAIN_STATE_OFFBOARD_FULL:
+
+		/* need offboard signal */
+		if (!status_flags.offboard_control_full_signal_lost) {
+
+			ret = TRANSITION_CHANGED;
+		}
+
+		break;
 	case commander_state_s::MAIN_STATE_MAX:
 	default:
 		break;
@@ -625,6 +634,38 @@ bool set_nav_state(vehicle_status_s &status, actuator_armed_s &armed, commander_
 
 		break;
 
+	case commander_state_s::MAIN_STATE_OFFBOARD_FULL:
+
+		if (status_flags.offboard_control_full_signal_lost) {
+			if (status.rc_signal_lost) {
+				// Offboard and RC are lost
+				enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_rc_and_no_offboard);
+				set_offboard_loss_nav_state(status, armed, status_flags, offb_loss_act);
+
+			} else {
+				// Offboard is lost, RC is ok
+				if (param_com_rcl_except & RCLossExceptionBits::RCL_EXCEPT_OFFBOARD) {
+					enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
+					set_offboard_loss_nav_state(status, armed, status_flags, offb_loss_act);
+
+				} else {
+					enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_offboard);
+					set_offboard_loss_rc_nav_state(status, armed, status_flags, offb_loss_rc_act);
+
+				}
+
+			}
+
+		} else if (status.rc_signal_lost && !(param_com_rcl_except & RCLossExceptionBits::RCL_EXCEPT_OFFBOARD)) {
+			// Only RC is lost
+			enable_failsafe(status, old_failsafe, mavlink_log_pub, event_failsafe_reason_t::no_rc);
+			set_link_loss_nav_state(status, armed, status_flags, internal_state, rc_loss_act, param_com_rcl_act_t);
+
+		} else {
+			status.nav_state = vehicle_status_s::NAVIGATION_STATE_OFFBOARD_FULL;
+		}
+
+		break;
 	default:
 		break;
 	}

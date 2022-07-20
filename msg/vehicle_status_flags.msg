@@ -34,6 +34,7 @@ bool circuit_breaker_engaged_posfailure_check	# set to true when the position va
 bool circuit_breaker_vtol_fw_arming_check 	# set to true if for VTOLs arming in fixed-wing mode should be allowed
 
 bool offboard_control_signal_lost
+bool offboard_control_full_signal_lost
 
 bool rc_signal_found_once
 bool rc_calibration_in_progress

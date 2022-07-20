@@ -88,3 +88,9 @@ rtps:
     send:    true
   - msg:     sensor_combined
     send:    true
+  - msg:     vehicle_local_position
+    receive: true
+  - msg:     vehicle_attitude
+    receive: true
+  - msg:     vehicle_angular_velocity
+    receive: true

@@ -416,6 +416,9 @@ int Commander::custom_command(int argc, char *argv[])
 				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_AUTO,
 						     PX4_CUSTOM_SUB_MODE_AUTO_PRECLAND);
 
+			} else if (!strcmp(argv[1], "offboard_full")) {
+				send_vehicle_command(vehicle_command_s::VEHICLE_CMD_DO_SET_MODE, 1, PX4_CUSTOM_MAIN_MODE_OFFBOARD_FULL);
+				PX4_INFO("Switching to offboard_full_mode");
 			} else {
 				PX4_ERR("argument %s unsupported.", argv[1]);
 			}
@@ -3462,6 +3465,15 @@ Commander::update_control_mode()
 
 		} else if (_offboard_control_mode_sub.get().body_rate) {
 			_vehicle_control_mode.flag_control_rates_enabled = true;
+		} else if (_offboard_control_mode_sub.get().actuator) {
+			_vehicle_control_mode.flag_control_position_enabled = false;
+			_vehicle_control_mode.flag_control_velocity_enabled = false;
+			_vehicle_control_mode.flag_control_altitude_enabled = false;
+			_vehicle_control_mode.flag_control_climb_rate_enabled = false;
+			_vehicle_control_mode.flag_control_acceleration_enabled = false;
+			_vehicle_control_mode.flag_control_rates_enabled = false;
+			_vehicle_control_mode.flag_control_attitude_enabled = false;
+
 		}
 
 		break;

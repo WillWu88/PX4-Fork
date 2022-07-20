@@ -66,6 +66,11 @@ mc_rate_control start
 #
 mc_att_control start
 
+#
+# Start LQR Replacement Module
+#
+# mc_lqr_control start
+
 if param greater -s MC_AT_EN 0
 then
 	mc_autotune_attitude_control start
