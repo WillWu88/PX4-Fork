@@ -669,6 +669,8 @@ bool MixingOutput::updateStaticMixer()
 		updateOutputSlewrateMultirotorMixer();
 	}
 
+	// check mixer enable status
+	_vehicle_control_mode_sub.update(&_vehicle_control_mode);
 	updateOutputSlewrateSimplemixer(); // update dt for output slew rate in simple mixer
 
 	unsigned n_updates = 0;
@@ -763,6 +765,9 @@ bool MixingOutput::updateDynamicMixer()
 		 * We also need to arm throttle for the ESC calibration. */
 		_throttle_armed = (_armed.armed && !_armed.lockdown) || _armed.in_esc_calibration_mode;
 	}
+
+	// check mixer enable status
+	_vehicle_control_mode_sub.update(&_vehicle_control_mode);
 
 	// only used for sitl with lockstep
 	bool has_updates = _subscription_callback && _subscription_callback->updated();
@@ -1015,7 +1020,9 @@ MixingOutput::setAndPublishActuatorOutputs(unsigned num_outputs, actuator_output
 	}
 
 	actuator_outputs.timestamp = hrt_absolute_time();
-	_outputs_pub.publish(actuator_outputs);
+	if (_vehicle_control_mode.flag_control_mixer_enabled){
+		_outputs_pub.publish(actuator_outputs);
+	}
 }
 
 void

@@ -52,6 +52,7 @@
 #include <uORB/topics/control_allocator_status.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/test_motor.h>
+#include <uORB/topics/vehicle_control_mode.h>
 
 using namespace time_literals;
 
@@ -290,6 +291,7 @@ private:
 	const bool _output_ramp_up; ///< if true, motors will ramp up from disarmed to min_output after arming
 
 	uORB::Subscription _armed_sub{ORB_ID(actuator_armed)};
+	uORB::Subscription _vehicle_control_mode_sub{ORB_ID(vehicle_control_mode)};
 	uORB::SubscriptionCallbackWorkItem _control_subs[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS];
 
 	uORB::PublicationMulti<actuator_outputs_s> _outputs_pub{ORB_ID(actuator_outputs)};
@@ -297,6 +299,7 @@ private:
 
 	actuator_controls_s _controls[actuator_controls_s::NUM_ACTUATOR_CONTROL_GROUPS] {};
 	actuator_armed_s _armed{};
+	vehicle_control_mode_s	_vehicle_control_mode{};
 
 	hrt_abstime _time_last_dt_update_multicopter{0};
 	hrt_abstime _time_last_dt_update_simple_mixer{0};

@@ -16,3 +16,4 @@ bool flag_control_climb_rate_enabled		# true if climb rate is controlled
 bool flag_control_termination_enabled		# true if flighttermination is enabled
 bool flag_control_lqr_enabled		# true if lqr control is enabled
 bool flag_control_offboard_full_enabled		# true if full offboard is enabled
+bool flag_control_mixer_enabled #true if mixer is enabled

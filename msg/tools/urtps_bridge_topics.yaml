@@ -92,3 +92,5 @@ rtps:
     receive: true
   - msg:     actuator_controls
     receive: true
+  - msg:     actuator_outputs
+    receive: true

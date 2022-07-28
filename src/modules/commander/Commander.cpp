@@ -3374,12 +3374,14 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_manual_enabled = true;
 		_vehicle_control_mode.flag_control_rates_enabled = stabilization_required();
 		_vehicle_control_mode.flag_control_attitude_enabled = stabilization_required();
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_STAB:
 		_vehicle_control_mode.flag_control_manual_enabled = true;
 		_vehicle_control_mode.flag_control_rates_enabled = true;
 		_vehicle_control_mode.flag_control_attitude_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_ALTCTL:
@@ -3388,6 +3390,7 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_attitude_enabled = true;
 		_vehicle_control_mode.flag_control_altitude_enabled = true;
 		_vehicle_control_mode.flag_control_climb_rate_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_POSCTL:
@@ -3398,6 +3401,7 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_climb_rate_enabled = true;
 		_vehicle_control_mode.flag_control_position_enabled = true;
 		_vehicle_control_mode.flag_control_velocity_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_AUTO_RTL:
@@ -3415,11 +3419,13 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_climb_rate_enabled = true;
 		_vehicle_control_mode.flag_control_position_enabled = true;
 		_vehicle_control_mode.flag_control_velocity_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_ACRO:
 		_vehicle_control_mode.flag_control_manual_enabled = true;
 		_vehicle_control_mode.flag_control_rates_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_DESCEND:
@@ -3427,6 +3433,7 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_rates_enabled = true;
 		_vehicle_control_mode.flag_control_attitude_enabled = true;
 		_vehicle_control_mode.flag_control_climb_rate_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	case vehicle_status_s::NAVIGATION_STATE_TERMINATION:
@@ -3445,6 +3452,7 @@ Commander::update_control_mode()
 			_vehicle_control_mode.flag_control_acceleration_enabled = true;
 			_vehicle_control_mode.flag_control_rates_enabled = true;
 			_vehicle_control_mode.flag_control_attitude_enabled = true;
+			_vehicle_control_mode.flag_control_mixer_enabled = true;
 
 		} else if (_offboard_control_mode_sub.get().velocity) {
 			_vehicle_control_mode.flag_control_velocity_enabled = true;
@@ -3453,15 +3461,18 @@ Commander::update_control_mode()
 			_vehicle_control_mode.flag_control_acceleration_enabled = true;
 			_vehicle_control_mode.flag_control_rates_enabled = true;
 			_vehicle_control_mode.flag_control_attitude_enabled = true;
+			_vehicle_control_mode.flag_control_mixer_enabled = true;
 
 		} else if (_offboard_control_mode_sub.get().acceleration) {
 			_vehicle_control_mode.flag_control_acceleration_enabled = true;
 			_vehicle_control_mode.flag_control_rates_enabled = true;
 			_vehicle_control_mode.flag_control_attitude_enabled = true;
+			_vehicle_control_mode.flag_control_mixer_enabled = true;
 
 		} else if (_offboard_control_mode_sub.get().attitude) {
 			_vehicle_control_mode.flag_control_rates_enabled = true;
 			_vehicle_control_mode.flag_control_attitude_enabled = true;
+			_vehicle_control_mode.flag_control_mixer_enabled = true;
 
 		} else if (_offboard_control_mode_sub.get().body_rate) {
 			_vehicle_control_mode.flag_control_rates_enabled = true;
@@ -3473,6 +3484,7 @@ Commander::update_control_mode()
 			_vehicle_control_mode.flag_control_acceleration_enabled = false;
 			_vehicle_control_mode.flag_control_rates_enabled = false;
 			_vehicle_control_mode.flag_control_attitude_enabled = false;
+			_vehicle_control_mode.flag_control_mixer_enabled = false;
 
 		}
 
@@ -3487,6 +3499,7 @@ Commander::update_control_mode()
 		_vehicle_control_mode.flag_control_climb_rate_enabled = true;
 		_vehicle_control_mode.flag_control_position_enabled = true;
 		_vehicle_control_mode.flag_control_velocity_enabled = true;
+		_vehicle_control_mode.flag_control_mixer_enabled = true;
 		break;
 
 	default:
